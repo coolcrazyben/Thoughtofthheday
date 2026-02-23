@@ -1,0 +1,46 @@
+import { createClient } from '@libsql/client';
+import { mkdirSync } from 'fs';
+import { join } from 'path';
+
+// Local dev: use a SQLite file.
+// Production (Vercel + Turso): use TURSO_DATABASE_URL + TURSO_AUTH_TOKEN env vars.
+const url = process.env.TURSO_DATABASE_URL ?? (() => {
+  const dir = join(process.cwd(), 'data');
+  mkdirSync(dir, { recursive: true });
+  return `file:${join(dir, 'local.db')}`;
+})();
+
+export const db = createClient({
+  url,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
+
+let schemaReady = false;
+
+export async function ensureSchema() {
+  if (schemaReady) return;
+  await db.executeMultiple(`
+    CREATE TABLE IF NOT EXISTS thoughts (
+      date        TEXT    PRIMARY KEY,
+      content     TEXT    NOT NULL,
+      created_at  INTEGER NOT NULL,
+      updated_at  INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      endpoint     TEXT    UNIQUE NOT NULL,
+      p256dh       TEXT    NOT NULL,
+      auth         TEXT    NOT NULL,
+      notify_time  TEXT    NOT NULL DEFAULT '09:00',
+      created_at   INTEGER NOT NULL
+    );
+  `);
+  schemaReady = true;
+}
+
+// Convert a libsql Row (array-like) to a plain JS object using column names.
+export function rowToObj(row, columns) {
+  const obj = {};
+  columns.forEach((col, i) => { obj[col] = row[i]; });
+  return obj;
+}

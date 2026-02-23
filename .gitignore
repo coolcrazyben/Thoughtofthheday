@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.local
+dist/
+data/*.db
+data/*.db-shm
+data/*.db-wal
+*.log
+.DS_Store
+.vercel/
+# Legacy backend dir (can be deleted manually)
+backend/
