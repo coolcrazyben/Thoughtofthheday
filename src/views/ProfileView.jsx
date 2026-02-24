@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -16,6 +16,7 @@ function formatDate(dateStr) {
 
 export default function ProfileView() {
   const { username } = useParams();
+  const navigate = useNavigate();
   const { user, token } = useAuth();
   const isOwner = user?.username === username;
 
@@ -24,11 +25,19 @@ export default function ProfileView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Follow state
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+
+  // Bio state
   const [editingBio, setEditingBio] = useState(false);
   const [bioInput, setBioInput] = useState('');
   const [savingBio, setSavingBio] = useState(false);
   const [bioStatus, setBioStatus] = useState(null);
 
+  // Fetch profile data (doesn't depend on auth)
   useEffect(() => {
     setLoading(true);
     setError(null);
@@ -49,6 +58,51 @@ export default function ProfileView() {
         setLoading(false);
       });
   }, [username]);
+
+  // Fetch follow stats — re-runs when token loads so isFollowing is accurate
+  useEffect(() => {
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    fetch(`/api/follow/${encodeURIComponent(username)}`, { headers })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        setFollowerCount(data.followerCount);
+        setFollowingCount(data.followingCount);
+        setIsFollowing(data.isFollowing);
+      })
+      .catch(() => {});
+  }, [username, token]);
+
+  const handleFollow = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    // Optimistic update
+    const wasFollowing = isFollowing;
+    setIsFollowing(!wasFollowing);
+    setFollowerCount(c => wasFollowing ? c - 1 : c + 1);
+    setFollowLoading(true);
+
+    try {
+      const res = await fetch('/api/follow', {
+        method: wasFollowing ? 'DELETE' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ username }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch {
+      // Revert on error
+      setIsFollowing(wasFollowing);
+      setFollowerCount(c => wasFollowing ? c + 1 : c - 1);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   const handleSaveBio = async () => {
     setSavingBio(true);
@@ -93,11 +147,31 @@ export default function ProfileView() {
           {profile.username.charAt(0).toUpperCase()}
         </div>
         <div className="profile-info">
-          <h1 className="profile-username">{profile.username}</h1>
+          <div className="profile-name-row">
+            <h1 className="profile-username">{profile.username}</h1>
+            {!isOwner && (
+              <button
+                className={`follow-btn ${isFollowing ? 'following' : ''}`}
+                onClick={handleFollow}
+                disabled={followLoading}
+              >
+                {isFollowing ? 'Unfollow' : 'Follow'}
+              </button>
+            )}
+          </div>
           <p className="profile-joined">
             Member since{' '}
             {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </p>
+          <div className="profile-stats">
+            <span className="profile-stat">
+              <strong>{followerCount}</strong> {followerCount === 1 ? 'follower' : 'followers'}
+            </span>
+            <span className="profile-stat-sep">·</span>
+            <span className="profile-stat">
+              <strong>{followingCount}</strong> following
+            </span>
+          </div>
         </div>
       </div>
 
@@ -149,7 +223,7 @@ export default function ProfileView() {
 
         {thoughts.length === 0 ? (
           <div className="archive-empty">
-            <p>{isOwner ? 'You haven\'t shared any thoughts yet.' : 'No thoughts yet.'}</p>
+            <p>{isOwner ? "You haven't shared any thoughts yet." : 'No thoughts yet.'}</p>
           </div>
         ) : (
           <div className="archive-list">

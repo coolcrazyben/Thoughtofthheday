@@ -43,6 +43,13 @@ export async function ensureSchema() {
       password_hash TEXT    NOT NULL,
       created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS follows (
+      id            TEXT    PRIMARY KEY,
+      follower_id   TEXT    NOT NULL REFERENCES users(id),
+      following_id  TEXT    NOT NULL REFERENCES users(id),
+      created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(follower_id, following_id)
+    );
   `);
   // Add user_id to thoughts if not already present (SQLite doesn't support IF NOT EXISTS for ALTER)
   try {
