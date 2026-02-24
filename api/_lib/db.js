@@ -2,11 +2,12 @@ import { createClient } from '@libsql/client';
 import { mkdirSync } from 'fs';
 import { join } from 'path';
 
-// Local dev: use a SQLite file.
-// Production (Vercel + Turso): use TURSO_DATABASE_URL + TURSO_AUTH_TOKEN env vars.
+// Production (Vercel + Turso): set TURSO_DATABASE_URL + TURSO_AUTH_TOKEN env vars.
+// Local dev fallback: SQLite file. Vercel serverless only allows writes to /tmp.
 const url = process.env.TURSO_DATABASE_URL ?? (() => {
-  const dir = join(process.cwd(), 'data');
-  mkdirSync(dir, { recursive: true });
+  const isServerless = !!process.env.VERCEL;
+  const dir = isServerless ? '/tmp' : join(process.cwd(), 'data');
+  if (!isServerless) mkdirSync(dir, { recursive: true });
   return `file:${join(dir, 'local.db')}`;
 })();
 
