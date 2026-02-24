@@ -29,6 +29,7 @@ export default function NavBar({ view, setView }) {
   const btnRef = useRef(null);
 
   const isMain = location.pathname === '/';
+  const isDiscover = location.pathname === '/discover';
   const isCommunity = location.pathname === '/community';
 
   // On mount: check if already subscribed
@@ -154,32 +155,18 @@ export default function NavBar({ view, setView }) {
       </div>
 
       <nav className="navbar-nav" aria-label="Main">
-        {isMain && (
-          <>
-            <button
-              className={`nav-btn ${isMain && view === 'today' ? 'active' : ''}`}
-              onClick={() => { navigate('/'); setView('today'); }}
-            >
-              Today
-            </button>
-            <button
-              className={`nav-btn ${isMain && view === 'archive' ? 'active' : ''}`}
-              onClick={() => { navigate('/'); setView('archive'); }}
-            >
-              Archive
-            </button>
-          </>
-        )}
-        {!isMain && (
-          <>
-            <button className="nav-btn" onClick={() => { navigate('/'); setView('today'); }}>
-              Today
-            </button>
-            <button className="nav-btn" onClick={() => { navigate('/'); setView('archive'); }}>
-              Archive
-            </button>
-          </>
-        )}
+        <button
+          className={`nav-btn ${isMain ? 'active' : ''}`}
+          onClick={() => { navigate('/'); setView('today'); }}
+        >
+          Today
+        </button>
+        <button
+          className={`nav-btn ${isDiscover ? 'active' : ''}`}
+          onClick={() => navigate('/discover')}
+        >
+          Discover
+        </button>
         <button
           className={`nav-btn ${isCommunity ? 'active' : ''}`}
           onClick={() => navigate('/community')}

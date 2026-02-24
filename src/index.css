@@ -792,6 +792,108 @@ button:disabled {
   align-items: baseline;
 }
 
+/* ── Discover / search ──────────────────────────────────────────────────────── */
+.discover-view { padding-top: 0.5rem; }
+
+.search-bar-wrapper {
+  margin-bottom: 1.75rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  font-family: var(--sans);
+  font-size: 1rem;
+  color: var(--text-primary);
+  background: var(--bg-white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  /* hide the browser's built-in × clear button on some engines */
+  -webkit-appearance: none;
+}
+
+.search-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(196, 149, 106, 0.15);
+}
+
+.search-input::placeholder { color: var(--text-muted); }
+
+.user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.user-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  text-decoration: none;
+  color: inherit;
+}
+
+.user-card:hover {
+  border-color: var(--accent-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.user-card-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent-subtle);
+  border: 1.5px solid var(--accent-light);
+  color: var(--accent);
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.user-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-card-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.user-card-username {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.user-card-followers {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.user-card-bio {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-top: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────────── */
 @media (max-width: 560px) {
   .main-content { padding: 1.5rem 1rem 4rem; }

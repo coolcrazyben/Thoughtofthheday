@@ -4,6 +4,7 @@ import NavBar from './components/NavBar.jsx';
 import TodayView from './views/TodayView.jsx';
 import ArchiveView from './views/ArchiveView.jsx';
 import CommunityView from './views/CommunityView.jsx';
+import DiscoverView from './views/DiscoverView.jsx';
 import LoginView from './views/LoginView.jsx';
 import SignupView from './views/SignupView.jsx';
 import ProfileView from './views/ProfileView.jsx';
@@ -85,6 +86,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<MainContent view={view} />} />
           <Route path="/community" element={<CommunityView />} />
+          <Route path="/discover" element={<DiscoverView />} />
           <Route path="/login" element={<LoginView />} />
           <Route path="/signup" element={<SignupView />} />
           <Route path="/profile/:username" element={<ProfileView />} />
