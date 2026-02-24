@@ -4,7 +4,7 @@
   "description": "A warm, minimal daily journaling app",
   "type": "module",
   "scripts": {
-    "dev": "vercel dev",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },

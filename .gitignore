@@ -10,3 +10,5 @@ data/*.db-wal
 .vercel/
 # Legacy backend dir (can be deleted manually)
 backend/
+
+.vercel

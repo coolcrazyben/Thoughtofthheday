@@ -1,7 +1,7 @@
 {
   "buildCommand": "vite build",
   "outputDirectory": "dist",
-  "devCommand": "vite --port 3001",
+  "devCommand": "vite --port $PORT",
   "crons": [
     {
       "path": "/api/send-notification",
