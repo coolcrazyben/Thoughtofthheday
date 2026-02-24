@@ -2,6 +2,9 @@
   "buildCommand": "vite build",
   "outputDirectory": "dist",
   "devCommand": "vite --port $PORT",
+  "rewrites": [
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ],
   "crons": [
     {
       "path": "/api/send-notification",

@@ -5,7 +5,11 @@ export default async function handler(req, res) {
   const { date } = req.query;
 
   if (req.method === 'GET') {
-    const r = await db.execute({ sql: 'SELECT * FROM thoughts WHERE date = ?', args: [date] });
+    const r = await db.execute({
+      sql: `SELECT t.date, t.content, t.created_at, t.updated_at, t.user_id, u.username
+            FROM thoughts t LEFT JOIN users u ON t.user_id = u.id WHERE t.date = ?`,
+      args: [date],
+    });
     if (!r.rows.length) return res.status(404).json({ error: 'Not found' });
     return res.json(rowToObj(r.rows[0], r.columns));
   }
@@ -19,7 +23,11 @@ export default async function handler(req, res) {
       args: [content.trim(), now, date],
     });
     if (upd.rowsAffected === 0) return res.status(404).json({ error: 'Not found' });
-    const r = await db.execute({ sql: 'SELECT * FROM thoughts WHERE date = ?', args: [date] });
+    const r = await db.execute({
+      sql: `SELECT t.date, t.content, t.created_at, t.updated_at, t.user_id, u.username
+            FROM thoughts t LEFT JOIN users u ON t.user_id = u.id WHERE t.date = ?`,
+      args: [date],
+    });
     return res.json(rowToObj(r.rows[0], r.columns));
   }
 

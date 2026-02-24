@@ -35,7 +35,21 @@ export async function ensureSchema() {
       notify_time  TEXT    NOT NULL DEFAULT '09:00',
       created_at   INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS users (
+      id            TEXT    PRIMARY KEY,
+      username      TEXT    UNIQUE NOT NULL,
+      bio           TEXT,
+      email         TEXT    UNIQUE NOT NULL,
+      password_hash TEXT    NOT NULL,
+      created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
   `);
+  // Add user_id to thoughts if not already present (SQLite doesn't support IF NOT EXISTS for ALTER)
+  try {
+    await db.execute('ALTER TABLE thoughts ADD COLUMN user_id TEXT REFERENCES users(id)');
+  } catch (e) {
+    if (!e.message?.includes('duplicate column name')) throw e;
+  }
   schemaReady = true;
 }
 

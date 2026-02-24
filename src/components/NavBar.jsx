@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -14,6 +16,10 @@ const PUSH_SUPPORTED =
   'Notification' in window;
 
 export default function NavBar({ view, setView }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
   const [showPanel, setShowPanel] = useState(false);
   const [notifyTime, setNotifyTime] = useState('09:00');
   // 'idle' | 'loading' | 'enabled' | 'error' | 'unsupported' | 'blocked'
@@ -21,6 +27,9 @@ export default function NavBar({ view, setView }) {
   const [statusMsg, setStatusMsg] = useState('');
   const panelRef = useRef(null);
   const btnRef = useRef(null);
+
+  const isMain = location.pathname === '/';
+  const isCommunity = location.pathname === '/community';
 
   // On mount: check if already subscribed
   useEffect(() => {
@@ -62,7 +71,6 @@ export default function NavBar({ view, setView }) {
         return;
       }
 
-      // Fetch VAPID public key from server
       const keyRes = await fetch('/api/vapid-key');
       if (!keyRes.ok) {
         setStatusMsg('Push notifications not configured on the server.');
@@ -129,98 +137,145 @@ export default function NavBar({ view, setView }) {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
   const isEnabled = notifStatus === 'enabled';
 
   return (
     <header className="navbar">
       <div className="navbar-brand">
-        <span className="brand-icon">✦</span>
-        <span className="brand-name">Thought of the Day</span>
+        <Link to="/" className="brand-link" onClick={() => setView('today')}>
+          <span className="brand-icon">✦</span>
+          <span className="brand-name">Thought of the Day</span>
+        </Link>
       </div>
 
       <nav className="navbar-nav" aria-label="Main">
+        {isMain && (
+          <>
+            <button
+              className={`nav-btn ${isMain && view === 'today' ? 'active' : ''}`}
+              onClick={() => { navigate('/'); setView('today'); }}
+            >
+              Today
+            </button>
+            <button
+              className={`nav-btn ${isMain && view === 'archive' ? 'active' : ''}`}
+              onClick={() => { navigate('/'); setView('archive'); }}
+            >
+              Archive
+            </button>
+          </>
+        )}
+        {!isMain && (
+          <>
+            <button className="nav-btn" onClick={() => { navigate('/'); setView('today'); }}>
+              Today
+            </button>
+            <button className="nav-btn" onClick={() => { navigate('/'); setView('archive'); }}>
+              Archive
+            </button>
+          </>
+        )}
         <button
-          className={`nav-btn ${view === 'today' ? 'active' : ''}`}
-          onClick={() => setView('today')}
+          className={`nav-btn ${isCommunity ? 'active' : ''}`}
+          onClick={() => navigate('/community')}
         >
-          Today
-        </button>
-        <button
-          className={`nav-btn ${view === 'archive' ? 'active' : ''}`}
-          onClick={() => setView('archive')}
-        >
-          Archive
+          Community
         </button>
       </nav>
 
-      <div className="notif-wrapper">
-        <button
-          ref={btnRef}
-          className={`notif-btn ${isEnabled ? 'enabled' : ''}`}
-          onClick={() => setShowPanel(v => !v)}
-          aria-label="Notification settings"
-          title="Notification settings"
-        >
-          {isEnabled ? '🔔' : '🔕'}
-        </button>
-
-        {showPanel && (
-          <div className="notif-panel" ref={panelRef} role="dialog" aria-label="Notification settings">
-            <h3 className="panel-title">Daily Reminder</h3>
-
-            {notifStatus === 'unsupported' ? (
-              <p className="panel-note">
-                Push notifications aren't supported in this browser.
-              </p>
-            ) : (
-              <>
-                <div className="panel-field">
-                  <label htmlFor="notif-time" className="panel-label">
-                    Remind me at
-                  </label>
-                  <input
-                    id="notif-time"
-                    type="time"
-                    className="time-input"
-                    value={notifyTime}
-                    onChange={e => setNotifyTime(e.target.value)}
-                  />
-                </div>
-
-                {isEnabled ? (
-                  <div className="panel-actions">
-                    <button className="btn-primary sm" onClick={handleUpdateTime}>
-                      Update time
-                    </button>
-                    <button className="btn-ghost sm" onClick={handleDisable}>
-                      Disable
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    className="btn-primary sm"
-                    onClick={handleEnable}
-                    disabled={notifStatus === 'loading'}
-                    style={{ width: '100%' }}
-                  >
-                    {notifStatus === 'loading' ? 'Enabling…' : 'Enable notifications'}
-                  </button>
-                )}
-
-                {notifStatus === 'blocked' && (
-                  <p className="panel-note warning">
-                    Notifications are blocked. Allow them in your browser settings.
-                  </p>
-                )}
-                {statusMsg && (
-                  <p className={`panel-note ${notifStatus === 'error' ? 'warning' : ''}`}>
-                    {statusMsg}
-                  </p>
-                )}
-              </>
-            )}
+      <div className="navbar-right">
+        {user ? (
+          <div className="nav-user">
+            <Link to={`/profile/${user.username}`} className="nav-username">
+              {user.username}
+            </Link>
+            <button className="btn-ghost sm" onClick={handleLogout}>
+              Log out
+            </button>
           </div>
+        ) : (
+          <Link
+            to="/login"
+            className={`nav-btn ${location.pathname === '/login' || location.pathname === '/signup' ? 'active' : ''}`}
+          >
+            Log in
+          </Link>
         )}
+
+        <div className="notif-wrapper">
+          <button
+            ref={btnRef}
+            className={`notif-btn ${isEnabled ? 'enabled' : ''}`}
+            onClick={() => setShowPanel(v => !v)}
+            aria-label="Notification settings"
+            title="Notification settings"
+          >
+            {isEnabled ? '🔔' : '🔕'}
+          </button>
+
+          {showPanel && (
+            <div className="notif-panel" ref={panelRef} role="dialog" aria-label="Notification settings">
+              <h3 className="panel-title">Daily Reminder</h3>
+
+              {notifStatus === 'unsupported' ? (
+                <p className="panel-note">
+                  Push notifications aren't supported in this browser.
+                </p>
+              ) : (
+                <>
+                  <div className="panel-field">
+                    <label htmlFor="notif-time" className="panel-label">
+                      Remind me at
+                    </label>
+                    <input
+                      id="notif-time"
+                      type="time"
+                      className="time-input"
+                      value={notifyTime}
+                      onChange={e => setNotifyTime(e.target.value)}
+                    />
+                  </div>
+
+                  {isEnabled ? (
+                    <div className="panel-actions">
+                      <button className="btn-primary sm" onClick={handleUpdateTime}>
+                        Update time
+                      </button>
+                      <button className="btn-ghost sm" onClick={handleDisable}>
+                        Disable
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      className="btn-primary sm"
+                      onClick={handleEnable}
+                      disabled={notifStatus === 'loading'}
+                      style={{ width: '100%' }}
+                    >
+                      {notifStatus === 'loading' ? 'Enabling…' : 'Enable notifications'}
+                    </button>
+                  )}
+
+                  {notifStatus === 'blocked' && (
+                    <p className="panel-note warning">
+                      Notifications are blocked. Allow them in your browser settings.
+                    </p>
+                  )}
+                  {statusMsg && (
+                    <p className={`panel-note ${notifStatus === 'error' ? 'warning' : ''}`}>
+                      {statusMsg}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

@@ -1,10 +1,16 @@
 import { db, ensureSchema, rowToObj } from '../_lib/db.js';
+import { getUserFromReq } from '../_lib/auth.js';
 
 export default async function handler(req, res) {
   await ensureSchema();
 
   if (req.method === 'GET') {
-    const result = await db.execute('SELECT * FROM thoughts ORDER BY date DESC');
+    const result = await db.execute(`
+      SELECT t.date, t.content, t.created_at, t.updated_at, t.user_id, u.username
+      FROM thoughts t
+      LEFT JOIN users u ON t.user_id = u.id
+      ORDER BY t.date DESC
+    `);
     return res.json(result.rows.map(r => rowToObj(r, result.columns)));
   }
 
@@ -13,13 +19,22 @@ export default async function handler(req, res) {
     if (!date || !content?.trim()) {
       return res.status(400).json({ error: 'date and content are required' });
     }
+
+    // Attach user_id if logged in
+    const authUser = await getUserFromReq(req);
+    const userId = authUser?.id ?? null;
+
     const now = Date.now();
     try {
       await db.execute({
-        sql: 'INSERT INTO thoughts (date, content, created_at, updated_at) VALUES (?, ?, ?, ?)',
-        args: [date, content.trim(), now, now],
+        sql: 'INSERT INTO thoughts (date, content, created_at, updated_at, user_id) VALUES (?, ?, ?, ?, ?)',
+        args: [date, content.trim(), now, now, userId],
       });
-      const r = await db.execute({ sql: 'SELECT * FROM thoughts WHERE date = ?', args: [date] });
+      const r = await db.execute({
+        sql: `SELECT t.date, t.content, t.created_at, t.updated_at, t.user_id, u.username
+              FROM thoughts t LEFT JOIN users u ON t.user_id = u.id WHERE t.date = ?`,
+        args: [date],
+      });
       return res.status(201).json(rowToObj(r.rows[0], r.columns));
     } catch (err) {
       if (err.message?.includes('UNIQUE') || err.message?.includes('PRIMARY KEY')) {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MONTHS = [
@@ -13,6 +14,7 @@ function formatDate(dateStr) {
 }
 
 export default function TodayView({ today, todayThought, onSave, onDelete }) {
+  const { token } = useAuth();
   const [content, setContent] = useState('');
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -37,11 +39,13 @@ export default function TodayView({ today, todayThought, onSave, onDelete }) {
     setStatus(null);
     try {
       const isNew = !todayThought;
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(
         isNew ? '/api/thoughts' : `/api/thoughts/${today}`,
         {
           method: isNew ? 'POST' : 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(isNew ? { date: today, content: trimmed } : { content: trimmed }),
         }
       );
