@@ -21,12 +21,15 @@ export default function NavBar({ view, setView }) {
   const { user, logout } = useAuth();
 
   const [showPanel, setShowPanel] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [notifyTime, setNotifyTime] = useState('09:00');
   // 'idle' | 'loading' | 'enabled' | 'error' | 'unsupported' | 'blocked'
   const [notifStatus, setNotifStatus] = useState(PUSH_SUPPORTED ? 'idle' : 'unsupported');
   const [statusMsg, setStatusMsg] = useState('');
   const panelRef = useRef(null);
   const btnRef = useRef(null);
+  const menuRef = useRef(null);
+  const hamburgerRef = useRef(null);
 
   const isMain = location.pathname === '/';
   const isDiscover = location.pathname === '/discover';
@@ -45,7 +48,7 @@ export default function NavBar({ view, setView }) {
       .catch(() => {});
   }, []);
 
-  // Close panel on outside click
+  // Close notification panel on outside click
   useEffect(() => {
     if (!showPanel) return;
     const handler = (e) => {
@@ -61,6 +64,32 @@ export default function NavBar({ view, setView }) {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [showPanel]);
+
+  // Close mobile menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target) &&
+        hamburgerRef.current &&
+        !hamburgerRef.current.contains(e.target)
+      ) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
+  }, [menuOpen]);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   const handleEnable = async () => {
     setNotifStatus('loading');
@@ -143,12 +172,14 @@ export default function NavBar({ view, setView }) {
     navigate('/');
   };
 
+  const closeMenu = () => setMenuOpen(false);
+
   const isEnabled = notifStatus === 'enabled';
 
   return (
     <header className="navbar">
       <div className="navbar-brand">
-        <Link to="/" className="brand-link" onClick={() => setView('today')}>
+        <Link to="/" className="brand-link" onClick={() => { setView('today'); closeMenu(); }}>
           <span className="brand-icon">✦</span>
           <span className="brand-name">Thought of the Day</span>
         </Link>
@@ -263,7 +294,87 @@ export default function NavBar({ view, setView }) {
             </div>
           )}
         </div>
+
+        {/* Hamburger — mobile only */}
+        <button
+          ref={hamburgerRef}
+          className="hamburger-btn"
+          onClick={() => setMenuOpen(v => !v)}
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={menuOpen}
+          aria-controls="mobile-menu"
+        >
+          {menuOpen ? '✕' : '☰'}
+        </button>
       </div>
+
+      {/* Mobile slide-down menu */}
+      {menuOpen && (
+        <div id="mobile-menu" className="mobile-menu" ref={menuRef} role="dialog" aria-label="Navigation menu">
+          <button
+            className="mobile-menu-close"
+            onClick={closeMenu}
+            aria-label="Close menu"
+          >
+            ✕
+          </button>
+          <nav className="mobile-menu-nav">
+            <button
+              className={`mobile-menu-item ${isMain ? 'active' : ''}`}
+              onClick={() => { navigate('/'); setView('today'); closeMenu(); }}
+            >
+              Today
+            </button>
+            <button
+              className={`mobile-menu-item ${isDiscover ? 'active' : ''}`}
+              onClick={() => { navigate('/discover'); closeMenu(); }}
+            >
+              Discover
+            </button>
+            <button
+              className={`mobile-menu-item ${isCommunity ? 'active' : ''}`}
+              onClick={() => { navigate('/community'); closeMenu(); }}
+            >
+              Community
+            </button>
+            <div className="mobile-menu-divider" role="separator" />
+            {user ? (
+              <>
+                <Link
+                  to={`/profile/${user.username}`}
+                  className="mobile-menu-item"
+                  onClick={closeMenu}
+                >
+                  {user.username}
+                </Link>
+                <button
+                  className="mobile-menu-item mobile-menu-logout"
+                  onClick={() => { handleLogout(); closeMenu(); }}
+                >
+                  Log out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className={`mobile-menu-item ${location.pathname === '/login' ? 'active' : ''}`}
+                  onClick={closeMenu}
+                >
+                  Log in
+                </Link>
+                <Link
+                  to="/signup"
+                  className={`mobile-menu-item ${location.pathname === '/signup' ? 'active' : ''}`}
+                  onClick={closeMenu}
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
