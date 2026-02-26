@@ -5,7 +5,7 @@
      • install/activate   → caches the shell for offline support
    ─────────────────────────────────────────────────────────────────────────── */
 
-const CACHE_NAME = 'totd-v2';
+const CACHE_NAME = 'totd-v3';
 const SHELL_URLS = ['/', '/index.html'];
 
 // ── Install: cache the app shell ─────────────────────────────────────────────
