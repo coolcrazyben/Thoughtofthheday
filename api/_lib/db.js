@@ -57,6 +57,19 @@ export async function ensureSchema() {
   } catch (e) {
     if (!e.message?.includes('duplicate column name')) throw e;
   }
+  // Add email notification preference columns to users
+  const notifCols = [
+    ['notify_email',    'INTEGER DEFAULT 1'],
+    ['notify_time',     "TEXT DEFAULT '09:00'"],
+    ['notify_timezone', "TEXT DEFAULT 'America/Chicago'"],
+  ];
+  for (const [col, def] of notifCols) {
+    try {
+      await db.execute(`ALTER TABLE users ADD COLUMN ${col} ${def}`);
+    } catch (e) {
+      if (!e.message?.includes('duplicate column name')) throw e;
+    }
+  }
   schemaReady = true;
 }
 

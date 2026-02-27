@@ -14,6 +14,121 @@ function formatDate(dateStr) {
   return `${WEEKDAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}, ${year}`;
 }
 
+const TIMEZONES = [
+  { value: 'UTC',                  label: 'UTC' },
+  { value: 'America/New_York',     label: 'Eastern (ET)' },
+  { value: 'America/Chicago',      label: 'Central (CT)' },
+  { value: 'America/Denver',       label: 'Mountain (MT)' },
+  { value: 'America/Los_Angeles',  label: 'Pacific (PT)' },
+  { value: 'America/Anchorage',    label: 'Alaska (AKT)' },
+  { value: 'Pacific/Honolulu',     label: 'Hawaii (HT)' },
+  { value: 'Europe/London',        label: 'London (GMT/BST)' },
+  { value: 'Europe/Paris',         label: 'Central Europe (CET)' },
+  { value: 'Asia/Tokyo',           label: 'Japan (JST)' },
+  { value: 'Australia/Sydney',     label: 'Sydney (AEST)' },
+];
+
+function NotificationSettings({ token }) {
+  const [prefs, setPrefs] = useState({
+    notify_email: true,
+    notify_time: '09:00',
+    notify_timezone: 'America/Chicago',
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState(null); // null | 'saved' | 'error'
+
+  useEffect(() => {
+    fetch('/api/user/notifications', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setPrefs(data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setStatus(null);
+    try {
+      const res = await fetch('/api/user/notifications', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(prefs),
+      });
+      if (!res.ok) throw new Error();
+      setStatus('saved');
+      setTimeout(() => setStatus(null), 2500);
+    } catch {
+      setStatus('error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div className="loading" style={{ padding: '1.5rem 0' }}><span className="loading-dot" /></div>;
+
+  return (
+    <div className="notif-settings-card">
+      <label className="notif-toggle-row">
+        <span className="notif-toggle-label">
+          Email me if I haven't posted by my reminder time
+        </span>
+        <span className="notif-toggle" aria-hidden="true">
+          <input
+            type="checkbox"
+            checked={prefs.notify_email}
+            onChange={e => setPrefs(p => ({ ...p, notify_email: e.target.checked }))}
+            aria-label="Enable email reminders"
+          />
+          <span className="notif-toggle-track" />
+        </span>
+      </label>
+
+      {prefs.notify_email && (
+        <div className="notif-fields">
+          <div className="form-group">
+            <label className="form-label" htmlFor="notif-time-pref">Reminder time</label>
+            <input
+              id="notif-time-pref"
+              type="time"
+              className="form-input"
+              value={prefs.notify_time}
+              onChange={e => setPrefs(p => ({ ...p, notify_time: e.target.value }))}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="notif-tz-pref">Timezone</label>
+            <select
+              id="notif-tz-pref"
+              className="form-input"
+              value={prefs.notify_timezone}
+              onChange={e => setPrefs(p => ({ ...p, notify_timezone: e.target.value }))}
+            >
+              {TIMEZONES.map(tz => (
+                <option key={tz.value} value={tz.value}>{tz.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
+      <div className="notif-save-row">
+        <button className="btn-primary sm" onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving…' : 'Save preferences'}
+        </button>
+        {status === 'saved' && <span className="status-msg success">Saved ✓</span>}
+        {status === 'error'  && <span className="status-msg error">Could not save — try again.</span>}
+      </div>
+    </div>
+  );
+}
+
 export default function ProfileView() {
   const { username } = useParams();
   const navigate = useNavigate();
@@ -37,7 +152,6 @@ export default function ProfileView() {
   const [savingBio, setSavingBio] = useState(false);
   const [bioStatus, setBioStatus] = useState(null);
 
-  // Fetch profile data (doesn't depend on auth)
   useEffect(() => {
     setLoading(true);
     setError(null);
@@ -59,7 +173,6 @@ export default function ProfileView() {
       });
   }, [username]);
 
-  // Fetch follow stats — re-runs when token loads so isFollowing is accurate
   useEffect(() => {
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     fetch(`/api/follow/${encodeURIComponent(username)}`, { headers })
@@ -74,17 +187,11 @@ export default function ProfileView() {
   }, [username, token]);
 
   const handleFollow = async () => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
-    // Optimistic update
+    if (!user) { navigate('/login'); return; }
     const wasFollowing = isFollowing;
     setIsFollowing(!wasFollowing);
     setFollowerCount(c => wasFollowing ? c - 1 : c + 1);
     setFollowLoading(true);
-
     try {
       const res = await fetch('/api/follow', {
         method: wasFollowing ? 'DELETE' : 'POST',
@@ -96,7 +203,6 @@ export default function ProfileView() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
-      // Revert on error
       setIsFollowing(wasFollowing);
       setFollowerCount(c => wasFollowing ? c + 1 : c - 1);
     } finally {
@@ -133,11 +239,7 @@ export default function ProfileView() {
   if (loading) return <div className="loading"><span className="loading-dot" /></div>;
 
   if (error) {
-    return (
-      <div className="error-state">
-        <p>{error}</p>
-      </div>
-    );
+    return <div className="error-state"><p>{error}</p></div>;
   }
 
   return (
@@ -212,6 +314,14 @@ export default function ProfileView() {
           </div>
         )}
       </div>
+
+      {/* Email reminder settings — owner only */}
+      {isOwner && (
+        <div className="profile-notif-section">
+          <h2 className="profile-section-title">Email Reminders</h2>
+          <NotificationSettings token={token} />
+        </div>
+      )}
 
       <div className="profile-thoughts">
         <h2 className="profile-section-title">
