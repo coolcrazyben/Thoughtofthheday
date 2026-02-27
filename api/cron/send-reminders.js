@@ -5,21 +5,6 @@ import { signToken } from '../_lib/auth.js';
 const APP_URL = process.env.APP_URL || 'https://thoughtoftheday.vercel.app';
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Thought of the Day <onboarding@resend.dev>';
 
-// Return the current hour (0–23) in the given IANA timezone
-function getCurrentHourInTimezone(timezone) {
-  try {
-    const str = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      hour: 'numeric',
-      hour12: false,
-    }).format(new Date());
-    const h = parseInt(str, 10);
-    return isNaN(h) ? new Date().getUTCHours() : h;
-  } catch {
-    return new Date().getUTCHours();
-  }
-}
-
 // Return today's date as YYYY-MM-DD in the given IANA timezone
 function getTodayInTimezone(timezone) {
   try {
@@ -115,17 +100,11 @@ export default async function handler(req, res) {
 
   const results = { sent: 0, skipped: 0, errors: 0 };
 
+  // Note: cron runs daily at 14:00 UTC (≈ 9am ET / 8am CT / 7am MT / 6am PT).
+  // The notify_time preference is stored for future Pro-plan hourly cron support.
+  // On Hobby, everyone who hasn't posted yet today (in their timezone) gets a nudge.
   for (const user of users) {
-    const timezone  = user.notify_timezone || 'America/Chicago';
-    const notifyTime = user.notify_time || '09:00';
-    const targetHour = parseInt(notifyTime.split(':')[0], 10);
-    const currentHour = getCurrentHourInTimezone(timezone);
-
-    // Only send during the user's preferred hour
-    if (currentHour !== targetHour) {
-      results.skipped++;
-      continue;
-    }
+    const timezone = user.notify_timezone || 'America/Chicago';
 
     // Skip if they've already posted today (in their timezone)
     const today = getTodayInTimezone(timezone);
