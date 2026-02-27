@@ -5,21 +5,14 @@
      • install/activate   → caches the shell for offline support
    ─────────────────────────────────────────────────────────────────────────── */
 
-const CACHE_NAME = 'totd-v3';
-const SHELL_URLS = ['/', '/index.html'];
+const CACHE_NAME = 'totd-v4';
 
-// ── Install: cache the app shell ─────────────────────────────────────────────
+// ── Install: skip waiting so the new SW activates immediately ────────────────
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then(cache => cache.addAll(SHELL_URLS))
-      .catch(() => { /* non-fatal — dev server may not have these yet */ })
-  );
   self.skipWaiting();
 });
 
-// ── Activate: remove stale caches ────────────────────────────────────────────
+// ── Activate: purge ALL old caches, claim clients right away ─────────────────
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches
@@ -27,20 +20,40 @@ self.addEventListener('activate', event => {
       .then(keys =>
         Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
       )
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// ── Fetch: serve from cache with network fallback ────────────────────────────
+// ── Fetch ─────────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', event => {
-  // Only intercept same-origin GET requests for navigation (not API calls)
   if (
     event.request.method !== 'GET' ||
     event.request.url.includes('/api/')
   ) return;
 
+  // Navigation requests (HTML pages): network-first.
+  // This ensures a fresh index.html is always fetched after a new deployment,
+  // preventing the white-screen bug where cached HTML references old asset hashes.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // Hashed static assets (JS/CSS/images): cache-first for performance.
   event.respondWith(
-    caches.match(event.request).then(cached => cached || fetch(event.request))
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+      return fetch(event.request).then(response => {
+        // Only cache successful same-origin responses
+        if (response.ok && response.url.startsWith(self.location.origin)) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      });
+    })
   );
 });
 
